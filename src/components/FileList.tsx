@@ -5,13 +5,15 @@ interface FileListProps {
   protocolName: string;
   directoryName: string;
   searchTerm: string;
+  onFileSelect: (fileName: string) => void;
 }
 
 const FileList: React.FC<FileListProps> = ({ 
   files, 
   protocolName, 
   directoryName, 
-  searchTerm
+  searchTerm,
+  onFileSelect
 }) => {
   const getFileIcon = (filename: string) => {
     const extension = filename.split('.').pop()?.toLowerCase();
@@ -80,6 +82,7 @@ const FileList: React.FC<FileListProps> = ({
         {filteredFiles.map((file, index) => (
           <div
             key={index}
+            onClick={() => onFileSelect(file)}
             className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
           >
             <span className="text-xl">{getFileIcon(file)}</span>
