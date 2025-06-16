@@ -9,17 +9,13 @@ import ApiService from './components/ApiService';
 import ConfigMenu from './components/ConfigMenu';
 
 interface FileData {
-  protocol: {
-    [key: string]: {
-      directory: {
-        [key: string]: {
-          files: string[];
-        };
-      };
+  [protocolName: string]: {
+    [directoryName: string]: {
+      files: string[];
+      max_conn: number;
+      curr_conn: number;
     };
   };
-  curr_conn: number;
-  max_conn: number;
 }
 
 interface ConfigFile {
@@ -45,12 +41,12 @@ const App: React.FC = () => {
       setData(result);
       
       // Auto-select first available protocol and directory
-      const protocols = Object.keys(result.protocol);
+      const protocols = Object.keys(result);
       if (protocols.length > 0) {
         const firstProtocol = protocols[0];
         setActiveProtocol(firstProtocol);
         
-        const directories = Object.keys(result.protocol[firstProtocol].directory);
+        const directories = Object.keys(result[firstProtocol]);
         if (directories.length > 0) {
           setActiveDirectory(directories[0]);
         }
@@ -69,7 +65,7 @@ const App: React.FC = () => {
   const handleProtocolSelect = (protocol: string) => {
     setActiveProtocol(protocol);
     if (data) {
-      const directories = Object.keys(data.protocol[protocol].directory);
+      const directories = Object.keys(data[protocol]);
       setActiveDirectory(directories.length > 0 ? directories[0] : null);
     }
   };
@@ -111,35 +107,59 @@ const App: React.FC = () => {
     ));
   };
 
-  const handleConnect = () => {
-    // TODO: Implement connect functionality
-    console.log('Connect clicked', selectedFiles);
+  const handleApi = () => {
+    // TODO: Implement API functionality
+    console.log('API clicked', selectedFiles);
+  };
+
+  const handleConnect = async () => {
+    try {
+      const response = await fetch('/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // TODO: Add payload structure here
+          selectedFiles
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Connection response:', result);
+      
+      // TODO: Handle successful connection
+      // For example: show success message, update UI state, etc.
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      // TODO: Handle connection error
+      // For example: show error message to user
+    }
   };
 
   const handleCancel = () => {
     setSelectedFiles([]);
   };
 
-  const handleApi = () => {
-    // TODO: Implement API functionality
-    console.log('API clicked', selectedFiles);
-  };
-
   if (loading) return <Loading />;
   if (error) return <Error message={error} onRetry={fetchData} />;
   if (!data) return <Error message="No data available" onRetry={fetchData} />;
 
-  const protocols = Object.keys(data.protocol);
-  const directories = activeProtocol ? Object.keys(data.protocol[activeProtocol].directory) : [];
+  const protocols = Object.keys(data);
+  const directories = activeProtocol ? Object.keys(data[activeProtocol]) : [];
   const files = activeProtocol && activeDirectory 
-    ? data.protocol[activeProtocol].directory[activeDirectory].files 
+    ? data[activeProtocol][activeDirectory].files 
     : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ConnectionStatus 
-        currentConnections={data.curr_conn} 
-        maxConnections={data.max_conn} 
+        currentConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].curr_conn : 0} 
+        maxConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].max_conn : 0} 
       />
       
       <ProtocolNavbar
