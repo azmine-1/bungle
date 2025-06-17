@@ -4,15 +4,17 @@ interface DirectoryNavbarProps {
   directories: string[];
   activeDirectory: string | null;
   onDirectorySelect: (directory: string) => void;
+  isDarkMode: boolean;
 }
 
 const DirectoryNavbar: React.FC<DirectoryNavbarProps> = ({ 
   directories, 
   activeDirectory, 
-  onDirectorySelect 
+  onDirectorySelect,
+  isDarkMode
 }) => {
   return (
-    <nav className="bg-gray-100 border-b border-gray-200">
+    <nav className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} border-b`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex space-x-6">
           {directories.map((directory) => (
@@ -21,8 +23,12 @@ const DirectoryNavbar: React.FC<DirectoryNavbarProps> = ({
               onClick={() => onDirectorySelect(directory)}
               className={`py-3 px-4 text-sm font-medium transition-colors duration-200 ${
                 activeDirectory === directory
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-gray-300'
+                  ? isDarkMode
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-blue-600 border-b-2 border-blue-600'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:text-blue-400 hover:border-b-2 hover:border-gray-500'
+                    : 'text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-gray-300'
               }`}
             >
               {directory}

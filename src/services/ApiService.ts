@@ -1,10 +1,12 @@
+interface DirectoryData {
+  files: string[];
+  conn_count: number;
+  max_conn: number;
+}
+
 interface FileData {
   [protocolName: string]: {
-    [directoryName: string]: {
-      files: string[];
-      max_conn: number;
-      curr_conn: number;
-    };
+    [directoryName: string]: DirectoryData;
   };
 }
 
@@ -30,89 +32,85 @@ export class ApiService {
       "ovpn": {
         "nordvpn": {
           files: [
-            "canada.ovpn",
-            "usa.ovpn",
-            "uk.ovpn",
-            "germany.ovpn",
-            "japan.ovpn",
-            "australia.ovpn",
-            "france.ovpn",
-            "netherlands.ovpn"
+            "us-newyork.ovpn",
+            "us-losangeles.ovpn",
+            "uk-london.ovpn",
+            "de-frankfurt.ovpn",
+            "fr-paris.ovpn",
+            "jp-tokyo.ovpn",
+            "sg-singapore.ovpn",
+            "ca-toronto.ovpn",
+            "au-sydney.ovpn",
+            "nl-amsterdam.ovpn"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "pia": {
           files: [
             "us-east.ovpn",
             "us-west.ovpn",
-            "ca-toronto.ovpn",
             "uk-london.ovpn",
             "de-frankfurt.ovpn",
-            "jp-tokyo.ovpn",
-            "au-sydney.ovpn",
             "fr-paris.ovpn"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "protonvpn": {
           files: [
-            "ca-toronto.ovpn",
             "us-newyork.ovpn",
+            "us-losangeles.ovpn",
             "uk-london.ovpn",
-            "de-berlin.ovpn",
-            "jp-tokyo.ovpn",
-            "au-sydney.ovpn",
+            "de-frankfurt.ovpn",
             "fr-paris.ovpn",
+            "jp-tokyo.ovpn",
             "nl-amsterdam.ovpn"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         }
       },
       "wg": {
         "nordvpn": {
           files: [
-            "canada.conf",
-            "usa.conf",
-            "uk.conf",
-            "germany.conf",
-            "japan.conf",
-            "australia.conf",
-            "france.conf",
+            "us-newyork.conf",
+            "us-losangeles.conf",
+            "uk-london.conf",
+            "de-frankfurt.conf",
+            "fr-paris.conf",
+            "jp-tokyo.conf",
+            "sg-singapore.conf",
+            "ca-toronto.conf",
+            "au-sydney.conf",
             "netherlands.conf"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "pia": {
           files: [
             "us-east.conf",
             "us-west.conf",
-            "ca-toronto.conf",
             "uk-london.conf",
             "de-frankfurt.conf",
-            "jp-tokyo.conf",
-            "au-sydney.conf",
             "fr-paris.conf"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "mullvad": {
           files: [
-            "ca-toronto.conf",
             "us-newyork.conf",
+            "us-losangeles.conf",
             "uk-london.conf",
-            "de-berlin.conf",
-            "jp-tokyo.conf",
-            "au-sydney.conf",
+            "de-frankfurt.conf",
             "fr-paris.conf",
+            "jp-tokyo.conf",
             "nl-amsterdam.conf"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         }
       },
       "ssh": {
@@ -124,87 +122,78 @@ export class ApiService {
             "sgp1.config",
             "lon1.config",
             "fra1.config",
-            "tor1.config",
             "sfo3.config"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "linode": {
           files: [
             "newark.config",
             "frankfurt.config",
             "singapore.config",
-            "london.config",
             "tokyo.config",
-            "sydney.config",
-            "toronto.config",
             "mumbai.config"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "vultr": {
           files: [
             "ewr.config",
             "fra.config",
             "sgp.config",
-            "lon.config",
             "tyo.config",
-            "syd.config",
-            "yyz.config",
             "bom.config"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         }
       },
-      "socks5": {
+      "socks": {
         "nordvpn": {
           files: [
-            "ca-toronto.socks",
             "us-newyork.socks",
+            "us-losangeles.socks",
             "uk-london.socks",
-            "de-berlin.socks",
-            "jp-tokyo.socks",
-            "au-sydney.socks",
+            "de-frankfurt.socks",
             "fr-paris.socks",
+            "jp-tokyo.socks",
+            "sg-singapore.socks",
+            "ca-toronto.socks",
+            "au-sydney.socks",
             "nl-amsterdam.socks"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "pia": {
           files: [
             "us-east.socks",
             "us-west.socks",
-            "ca-toronto.socks",
             "uk-london.socks",
             "de-frankfurt.socks",
-            "jp-tokyo.socks",
-            "au-sydney.socks",
             "fr-paris.socks"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         },
         "protonvpn": {
           files: [
-            "ca-toronto.socks",
             "us-newyork.socks",
+            "us-losangeles.socks",
             "uk-london.socks",
-            "de-berlin.socks",
-            "jp-tokyo.socks",
-            "au-sydney.socks",
+            "de-frankfurt.socks",
             "fr-paris.socks",
+            "jp-tokyo.socks",
             "nl-amsterdam.socks"
           ],
-          max_conn: 20,
-          curr_conn: 7
+          conn_count: 7,
+          max_conn: 20
         }
       }
     };
   }
 }
 
-export default ApiService;
+export default ApiService; 

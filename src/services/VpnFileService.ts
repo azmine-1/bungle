@@ -1,8 +1,8 @@
 // Define the TypeScript interfaces
 interface DirectoryData {
   files: string[];
+  conn_count: number;
   max_conn: number;
-  curr_conn: number;
 }
 
 interface ProtocolData {
@@ -10,7 +10,9 @@ interface ProtocolData {
 }
 
 interface FileData {
-  [protocolName: string]: ProtocolData;
+  [protocolName: string]: {
+    [directoryName: string]: DirectoryData;
+  };
 }
 
 // API Response type (what comes from the server)
@@ -65,8 +67,8 @@ export class VpnFileService {
       Object.entries(protocolData).forEach(([directoryName, directoryData]) => {
         fileData[protocolName][directoryName] = {
           files: directoryData.files,
-          max_conn: directoryData.max_conn,
-          curr_conn: directoryData.curr_conn
+          conn_count: directoryData.curr_conn,
+          max_conn: directoryData.max_conn
         };
       });
     });
@@ -80,20 +82,20 @@ export class VpnFileService {
   }
 
   // Helper method to get connection info for a directory
-  getConnectionInfo(fileData: FileData, protocol: string, directory: string): { curr_conn: number; max_conn: number } | null {
+  getConnectionInfo(fileData: FileData, protocol: string, directory: string): { conn_count: number; max_conn: number } | null {
     const directoryData = fileData[protocol]?.[directory];
     if (!directoryData) return null;
 
     return {
-      curr_conn: directoryData.curr_conn,
+      conn_count: directoryData.conn_count,
       max_conn: directoryData.max_conn
     };
   }
 
   // Helper method to check if directory has available connections
-  hasAvailableConnections(fileData: FileData, protocol: string, directory: string): boolean {
+  canConnect(fileData: FileData, protocol: string, directory: string): boolean {
     const connInfo = this.getConnectionInfo(fileData, protocol, directory);
-    return connInfo ? connInfo.curr_conn < connInfo.max_conn : false;
+    return connInfo ? connInfo.conn_count < connInfo.max_conn : false;
   }
 }
 
@@ -158,7 +160,7 @@ export const VpnFileManager: React.FC = () => {
           {Object.entries(protocolData).map(([directoryName, directoryData]) => (
             <div key={directoryName} style={{ marginLeft: '20px' }}>
               <h4>Directory: {directoryName}</h4>
-              <p>Connections: {directoryData.curr_conn} / {directoryData.max_conn}</p>
+              <p>Connections: {directoryData.conn_count} / {directoryData.max_conn}</p>
               <ul>
                 {directoryData.files.map((file, index) => (
                   <li key={index}>{file}</li>

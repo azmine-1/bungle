@@ -5,15 +5,16 @@ import Error from './components/Error';
 import DirectoryNavbar from './components/DirNavbar';
 import ConnectionStatus from './components/CurrConnections';
 import FileList from './components/FileList';
-import ApiService from './components/ApiService';
+import ApiService from './services/ApiService';
 import ConfigMenu from './components/ConfigMenu';
+import HopVisualizer from './components/HopVisualizer';
 
 interface FileData {
   [protocolName: string]: {
     [directoryName: string]: {
       files: string[];
+      conn_count: number;
       max_conn: number;
-      curr_conn: number;
     };
   };
 }
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [activeDirectory, setActiveDirectory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<ConfigFile[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   const fetchData = async () => {
     try {
@@ -156,11 +158,14 @@ const App: React.FC = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <ConnectionStatus 
-        currentConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].curr_conn : 0} 
-        maxConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].max_conn : 0} 
+        currentConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].conn_count : 0} 
+        maxConnections={activeProtocol && activeDirectory ? data[activeProtocol][activeDirectory].max_conn : 0}
+        isDarkMode={isDarkMode}
       />
+      
+      <HopVisualizer selectedFiles={selectedFiles} fileData={data} />
       
       <ProtocolNavbar
         protocols={protocols}
@@ -168,6 +173,8 @@ const App: React.FC = () => {
         onProtocolSelect={handleProtocolSelect}
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
       
       {activeProtocol && directories.length > 0 && (
@@ -175,6 +182,7 @@ const App: React.FC = () => {
           directories={directories}
           activeDirectory={activeDirectory}
           onDirectorySelect={handleDirectorySelect}
+          isDarkMode={isDarkMode}
         />
       )}
       
@@ -187,11 +195,12 @@ const App: React.FC = () => {
               directoryName={activeDirectory}
               searchTerm={searchTerm}
               onFileSelect={handleFileSelect}
+              isDarkMode={isDarkMode}
             />
           )}
           
           {(!activeProtocol || directories.length === 0) && (
-            <div className="text-center py-8 text-gray-500">
+            <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               No protocols or directories available
             </div>
           )}
@@ -203,6 +212,7 @@ const App: React.FC = () => {
           onConnect={handleConnect}
           onCancel={handleCancel}
           onApi={handleApi}
+          isDarkMode={isDarkMode}
         />
       </div>
     </div>

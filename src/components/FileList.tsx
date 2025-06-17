@@ -6,6 +6,7 @@ interface FileListProps {
   directoryName: string;
   searchTerm: string;
   onFileSelect: (fileName: string) => void;
+  isDarkMode: boolean;
 }
 
 const FileList: React.FC<FileListProps> = ({ 
@@ -13,7 +14,8 @@ const FileList: React.FC<FileListProps> = ({
   protocolName, 
   directoryName, 
   searchTerm,
-  onFileSelect
+  onFileSelect,
+  isDarkMode
 }) => {
   const getFileIcon = (filename: string) => {
     const extension = filename.split('.').pop()?.toLowerCase();
@@ -57,7 +59,7 @@ const FileList: React.FC<FileListProps> = ({
 
   if (filteredFiles.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
         {searchTerm ? `No files found matching "${searchTerm}" in ${directoryName}` : 'No files found in this directory'}
       </div>
     );
@@ -65,11 +67,11 @@ const FileList: React.FC<FileListProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>
         {searchTerm ? (
           <>
             Files matching "{searchTerm}" in {protocolName}/{directoryName} 
-            <span className="text-sm font-normal text-gray-600 ml-2">
+            <span className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
               ({filteredFiles.length} of {files.length} files)
             </span>
           </>
@@ -83,10 +85,14 @@ const FileList: React.FC<FileListProps> = ({
           <div
             key={index}
             onClick={() => onFileSelect(file)}
-            className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
+            className={`flex items-center space-x-3 p-3 rounded-lg shadow-sm border transition-all duration-200 cursor-pointer ${
+              isDarkMode 
+                ? 'bg-gray-800 border-gray-700 hover:shadow-md hover:border-gray-600' 
+                : 'bg-white border-gray-200 hover:shadow-md hover:border-gray-300'
+            }`}
           >
             <span className="text-xl">{getFileIcon(file)}</span>
-            <span className="text-gray-800 font-medium">{file}</span>
+            <span className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{file}</span>
           </div>
         ))}
       </div>
