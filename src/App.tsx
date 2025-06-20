@@ -8,22 +8,7 @@ import FileList from './components/FileList';
 import ApiService from './services/ApiService';
 import ConfigMenu from './components/ConfigMenu';
 import HopVisualizer from './components/HopVisualizer';
-
-interface FileData {
-  [protocolName: string]: {
-    [directoryName: string]: {
-      files: string[];
-      conn_count: number;
-      max_conn: number;
-    };
-  };
-}
-
-interface ConfigFile {
-  name: string;
-  protocol: string;
-  directory: string;
-}
+import type { FileData, ConfigFile } from './types';
 
 const App: React.FC = () => {
   const [data, setData] = useState<FileData | null>(null);
@@ -33,7 +18,7 @@ const App: React.FC = () => {
   const [activeDirectory, setActiveDirectory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<ConfigFile[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
   const fetchData = async () => {
     try {
@@ -186,8 +171,8 @@ const App: React.FC = () => {
         />
       )}
       
-      <div className="flex max-w-7xl mx-auto">
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row max-w-7xl mx-auto">
+        <div className="flex-1 order-2 lg:order-1">
           {activeProtocol && activeDirectory && (
             <FileList
               files={files}
@@ -200,20 +185,22 @@ const App: React.FC = () => {
           )}
           
           {(!activeProtocol || directories.length === 0) && (
-            <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className={`text-center py-8 px-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               No protocols or directories available
             </div>
           )}
         </div>
         
-        <ConfigMenu
-          selectedFiles={selectedFiles}
-          onRemoveFile={handleRemoveFile}
-          onConnect={handleConnect}
-          onCancel={handleCancel}
-          onApi={handleApi}
-          isDarkMode={isDarkMode}
-        />
+        <div className="order-1 lg:order-2">
+          <ConfigMenu
+            selectedFiles={selectedFiles}
+            onRemoveFile={handleRemoveFile}
+            onConnect={handleConnect}
+            onCancel={handleCancel}
+            onApi={handleApi}
+            isDarkMode={isDarkMode}
+          />
+        </div>
       </div>
     </div>
   );

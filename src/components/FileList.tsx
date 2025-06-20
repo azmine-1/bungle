@@ -66,8 +66,8 @@ const FileList: React.FC<FileListProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>
+    <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+      <h3 className={`text-base sm:text-lg font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4 px-2 sm:px-0`}>
         {searchTerm ? (
           <>
             Files matching "{searchTerm}" in {protocolName}/{directoryName} 
@@ -85,14 +85,14 @@ const FileList: React.FC<FileListProps> = ({
           <div
             key={index}
             onClick={() => onFileSelect(file)}
-            className={`flex items-center space-x-3 p-3 rounded-lg shadow-sm border transition-all duration-200 cursor-pointer ${
+            className={`flex items-center space-x-3 p-3 sm:p-3 rounded-lg shadow-sm border transition-all duration-200 cursor-pointer mx-2 sm:mx-0 ${
               isDarkMode 
                 ? 'bg-gray-800 border-gray-700 hover:shadow-md hover:border-gray-600' 
                 : 'bg-white border-gray-200 hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <span className="text-xl">{getFileIcon(file)}</span>
-            <span className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{file}</span>
+            <span className="text-lg sm:text-xl flex-shrink-0">{getFileIcon(file)}</span>
+            <span className={`font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{file}</span>
           </div>
         ))}
       </div>

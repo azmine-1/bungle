@@ -1,14 +1,4 @@
-interface DirectoryData {
-  files: string[];
-  conn_count: number;
-  max_conn: number;
-}
-
-interface FileData {
-  [protocolName: string]: {
-    [directoryName: string]: DirectoryData;
-  };
-}
+import type { FileData, DirectoryData } from '../types';
 
 export class ApiService {
   private static readonly BASE_URL = 'your-api-endpoint-here';

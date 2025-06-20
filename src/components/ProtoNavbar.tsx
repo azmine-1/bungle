@@ -22,13 +22,13 @@ const ProtocolNavbar: React.FC<ProtocolNavbarProps> = ({
   return (
     <nav className={`${isDarkMode ? 'bg-gray-800' : 'bg-blue-600'} shadow-lg`}>
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex space-x-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-0">
+          <div className="flex flex-wrap gap-2 sm:gap-0 sm:space-x-8 mb-4 sm:mb-0">
             {protocols.map((protocol) => (
               <button
                 key={protocol}
                 onClick={() => onProtocolSelect(protocol)}
-                className={`py-4 px-6 text-sm font-medium transition-colors duration-200 ${
+                className={`py-2 sm:py-4 px-3 sm:px-6 text-sm font-medium transition-colors duration-200 rounded-lg sm:rounded-none ${
                   activeProtocol === protocol
                     ? 'text-white border-b-2 border-white'
                     : isDarkMode 
@@ -62,13 +62,13 @@ const ProtocolNavbar: React.FC<ProtocolNavbarProps> = ({
               )}
             </button>
             
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <input
                 type="text"
                 placeholder="Search files..."
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className={`w-64 px-4 py-2 pl-10 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent ${
+                className={`w-full sm:w-64 px-4 py-2 pl-10 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent ${
                   isDarkMode 
                     ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400' 
                     : 'bg-white text-gray-900 border-gray-300'
