@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import ApiService from '../services/ApiService';
+import type { StatusResponse, TimeoutResponse } from '../services/ApiService';
 import type { FileData, ConfigFile } from '../types';
 
 interface HopVisualizerProps {
@@ -12,6 +14,16 @@ const formatLocation = (name: string) =>
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+
+const formatTime = (seconds: number): string => {
+  if (seconds <= 0) return '00:00:00';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 // Components
 const ServerNode = ({ location, protocol, directory }: {
@@ -84,16 +96,139 @@ const DeviceIcon = ({ type, label }: { type: 'user' | 'internet'; label: string 
   </div>
 );
 
-const HopVisualizer: React.FC<HopVisualizerProps> = ({ selectedFiles, fileData }) => {
-  if (selectedFiles.length === 0 || !fileData) return null;
+const DisconnectButton = ({ onDisconnect, isDisconnecting }: { 
+  onDisconnect: () => void; 
+  isDisconnecting: boolean;
+}) => (
+  <button
+    onClick={onDisconnect}
+    disabled={isDisconnecting}
+    className="inline-flex items-center space-x-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-full px-3 py-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {isDisconnecting ? (
+      <svg className="w-3 h-3 text-red-400 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    ) : (
+      <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    )}
+    <span className="text-red-400 text-xs font-medium">
+      {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+    </span>
+  </button>
+);
+
+const Timer = ({ timeRemaining }: { timeRemaining: number }) => (
+  <div className="inline-flex items-center space-x-1 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1.5">
+    <svg className="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span className="text-blue-400 text-xs font-medium font-mono">
+      {formatTime(timeRemaining)}
+    </span>
+  </div>
+);
+
+const HopVisualizer: React.FC<HopVisualizerProps> = () => {
+  const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch status and timeout on component mount and set up polling
+  useEffect(() => {
+    let statusInterval: ReturnType<typeof setInterval>;
+    let timeoutInterval: ReturnType<typeof setInterval>;
+
+    const fetchStatus = async () => {
+      try {
+        const statusResponse = await ApiService.getStatus();
+        setStatus(statusResponse);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch status:', err);
+        setError('Failed to fetch connection status');
+      }
+    };
+
+    const fetchTimeout = async () => {
+      try {
+        if (status?.state === 'Connected' || status?.state === 'ConnectedWithTimer') {
+          const timeoutResponse = await ApiService.getTimeout();
+          setTimeRemaining(timeoutResponse.seconds_remaining);
+        }
+      } catch (err) {
+        console.error('Failed to fetch timeout:', err);
+      }
+    };
+
+    // Initial fetch
+    fetchStatus();
+    fetchTimeout();
+
+    // Set up polling for status (every 2 seconds)
+    statusInterval = setInterval(fetchStatus, 2000);
+
+    // Set up polling for timeout (every second when connected)
+    timeoutInterval = setInterval(() => {
+      if (status?.state === 'Connected' || status?.state === 'ConnectedWithTimer') {
+        fetchTimeout();
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(timeoutInterval);
+    };
+  }, [status?.state]);
+
+  const handleDisconnect = async () => {
+    try {
+      setIsDisconnecting(true);
+      setError(null);
+      await ApiService.disconnect();
+      
+      // Refresh status after disconnect
+      const statusResponse = await ApiService.getStatus();
+      setStatus(statusResponse);
+      setTimeRemaining(0);
+    } catch (err) {
+      console.error('Failed to disconnect:', err);
+      setError('Failed to disconnect');
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
+  // Don't show visualizer if not connected
+  if (!status || (status.state !== 'Connected' && status.state !== 'ConnectedWithTimer' && status.state !== 'ConnectionInProgress')) {
+    return null;
+  }
+
+  // Parse hop names into ConfigFile format for display
+  const activeHops = status.hop_name_list ? ApiService.parseHopNameList(status.hop_name_list) : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-3">
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg p-3 shadow-xl border border-slate-700">
+        {error && (
+          <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <p className="text-red-400 text-xs text-center">{error}</p>
+          </div>
+        )}
+
         <div className="text-center mb-3">
-          <h2 className="text-sm sm:text-base font-bold text-white mb-1">Multi-Hop VPN Route</h2>
+          <h2 className="text-sm sm:text-base font-bold text-white mb-1">
+            {status.state === 'ConnectionInProgress' ? 'Connecting...' : 'Active VPN Route'}
+          </h2>
           <p className="text-xs text-slate-300">
-            Your connection will route through {selectedFiles.length} secure hop{selectedFiles.length > 1 ? 's' : ''}
+            {status.state === 'ConnectionInProgress' 
+              ? 'Establishing connection through selected hops'
+              : `Connected through ${activeHops.length} secure hop${activeHops.length > 1 ? 's' : ''}`
+            }
           </p>
         </div>
 
@@ -104,16 +239,16 @@ const HopVisualizer: React.FC<HopVisualizerProps> = ({ selectedFiles, fileData }
             <DeviceIcon type="user" label="Your Device" />
             <ConnectionArrow />
 
-            {selectedFiles.map((file, index) => {
-              const location = formatLocation(file.name);
-              const isLast = index === selectedFiles.length - 1;
+            {activeHops.map((hop, index) => {
+              const location = formatLocation(hop.name);
+              const isLast = index === activeHops.length - 1;
 
               return (
                 <React.Fragment key={index}>
                   <ServerNode
                     location={location}
-                    protocol={file.protocol}
-                    directory={file.directory}
+                    protocol={hop.protocol}
+                    directory={hop.directory}
                   />
                   {!isLast && <ConnectionArrow />}
                 </React.Fragment>
@@ -125,13 +260,38 @@ const HopVisualizer: React.FC<HopVisualizerProps> = ({ selectedFiles, fileData }
           </div>
         </div>
 
-        <div className="mt-3 text-center">
-          <div className="inline-flex items-center space-x-1 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1">
-            <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mt-3 flex items-center justify-center space-x-3">
+          {/* Connection Status */}
+          <div className={`inline-flex items-center space-x-1 rounded-full px-2 py-1 ${
+            status.state === 'Connected' || status.state === 'ConnectedWithTimer' 
+              ? 'bg-green-500/10 border border-green-500/20'
+              : 'bg-yellow-500/10 border border-yellow-500/20'
+          }`}>
+            <svg className={`w-3 h-3 ${
+              status.state === 'Connected' || status.state === 'ConnectedWithTimer' 
+                ? 'text-green-400' 
+                : 'text-yellow-400'
+            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <span className="text-green-400 text-xs font-medium">Bungle</span>
+            <span className={`text-xs font-medium ${
+              status.state === 'Connected' || status.state === 'ConnectedWithTimer' 
+                ? 'text-green-400' 
+                : 'text-yellow-400'
+            }`}>
+              {status.state === 'ConnectionInProgress' ? 'Connecting' : 'Connected'}
+            </span>
           </div>
+
+          {/* Timer */}
+          {(status.state === 'Connected' || status.state === 'ConnectedWithTimer') && timeRemaining > 0 && (
+            <Timer timeRemaining={timeRemaining} />
+          )}
+
+          {/* Disconnect Button */}
+          {(status.state === 'Connected' || status.state === 'ConnectedWithTimer') && (
+            <DisconnectButton onDisconnect={handleDisconnect} isDisconnecting={isDisconnecting} />
+          )}
         </div>
       </div>
     </div>

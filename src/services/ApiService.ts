@@ -1,19 +1,289 @@
-import type { FileData, DirectoryData } from '../types';
+import type { FileData, DirectoryData, ConfigFile } from '../types';
+
+// Add new types for the API responses
+export interface StatusResponse {
+  state: "Disconnected" | "ConnectionInProgress" | "Connected" | "ConnectedWithTimer";
+  hop_list: string[]; // e.g: ["OpenVPN", "Wireguard", "OpenVPN"]
+  hop_name_list: string[]; // e.g: "bahamas.ovpn[PIA_NPT]"
+  remote_ip_list: string[];
+  time: string;
+}
+
+export interface ConnectPayload {
+  routes: {
+    name: string;
+    directory: string;
+    type: string;
+  }[];
+  timeout: number;
+}
+
+export interface ConnectResponse {
+  success: boolean;
+  message?: string;
+  // Add other fields as needed based on your API response
+}
+
+export interface ConnectionCountResponse {
+  count: number;
+}
+
+export interface TimeoutResponse {
+  seconds_remaining: number;
+}
+
+export interface TimeoutUpdateResponse {
+  success: boolean;
+  message?: string;
+  new_timeout?: number;
+}
 
 export class ApiService {
-  private static readonly BASE_URL = 'your-api-endpoint-here';
+  private static readonly BASE_URL = 'http://localhost:8000';
+  private static readonly WS_URL = 'ws://localhost:8000';
 
+  /**
+   * Fetch file data from /listfiles endpoint
+   */
   static async fetchFileData(): Promise<FileData> {
     try {
-      // Replace this mock with your actual API call
-      const response = await fetch(`${this.BASE_URL}/files`);
+      const response = await fetch(`${this.BASE_URL}/list_files`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
+      console.warn('API call failed, using mock data:', error);
       // For now, return mock data if API fails
       return this.getMockData();
+    }
+  }
+
+  /**
+   * Get connection status from /status endpoint
+   */
+  static async getStatus(): Promise<StatusResponse> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/status`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect using selected files via /connect endpoint
+   */
+  static async connect(selectedFiles: ConfigFile[], timeout: number = 3600): Promise<ConnectResponse> {
+    try {
+      const routes = selectedFiles.map(file => ({
+        name: file.name,
+        directory: file.directory,
+        type: file.protocol
+      }));
+
+      const payload: ConnectPayload = {
+        routes,
+        timeout
+      };
+
+      console.log('Sending connect request:', JSON.stringify(payload, null, 2));
+
+      const response = await fetch(`${this.BASE_URL}/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Connection failed with status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect from current connection
+   * Assuming there's a disconnect endpoint - adjust as needed
+   */
+  static async disconnect(): Promise<void> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Disconnect failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current connection timeout remaining in seconds
+   */
+  static async getTimeout(): Promise<TimeoutResponse> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/timeout`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch timeout:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add time to current connection timeout
+   * @param time - Time in seconds to add (defaults to 3600 for 1 hour)
+   */
+  static async addTimeout(time: number = 3600): Promise<TimeoutUpdateResponse> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/timeout/${time}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Timeout update failed with status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to update timeout:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create WebSocket connection for real-time connection count updates
+   * @param onMessage - Callback function to handle incoming messages
+   * @param onError - Optional error handler
+   * @param onClose - Optional close handler
+   */
+  static createConnectionCountWebSocket(
+    onMessage: (data: ConnectionCountResponse) => void,
+    onError?: (error: Event) => void,
+    onClose?: (event: CloseEvent) => void
+  ): WebSocket {
+    const ws = new WebSocket(`${this.WS_URL}/ws/conn_count`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onMessage(data);
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket connection count error:', error);
+      if (onError) onError(error);
+    };
+
+    ws.onclose = (event) => {
+      console.log('WebSocket connection count closed:', event);
+      if (onClose) onClose(event);
+    };
+
+    return ws;
+  }
+
+  /**
+   * Create WebSocket connection for real-time status updates
+   * @param onMessage - Callback function to handle incoming messages
+   * @param onError - Optional error handler
+   * @param onClose - Optional close handler
+   */
+  static createStatusWebSocket(
+    onMessage: (data: StatusResponse) => void,
+    onError?: (error: Event) => void,
+    onClose?: (event: CloseEvent) => void
+  ): WebSocket {
+    const ws = new WebSocket(`${this.WS_URL}/ws/status`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onMessage(data);
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket status error:', error);
+      if (onError) onError(error);
+    };
+
+    ws.onclose = (event) => {
+      console.log('WebSocket status closed:', event);
+      if (onClose) onClose(event);
+    };
+
+    return ws;
+  }
+
+  /**
+   * Parse hop_name_list into ConfigFile format for the visualizer
+   */
+  static parseHopNameList(hopNameList: string[]): ConfigFile[] {
+    return hopNameList.map(hopName => {
+      // Parse format like "bahamas.ovpn[PIA_NPT]"
+      const match = hopName.match(/^(.+?)\[(.+?)_(.+?)\]$/);
+      if (match) {
+        const [, fileName, directory, protocol] = match;
+        return {
+          name: fileName,
+          directory: directory.toLowerCase(),
+          protocol: protocol.toLowerCase()
+        };
+      }
+      
+      // Fallback parsing if format is different
+      console.warn('Unexpected hop name format:', hopName);
+      return {
+        name: hopName,
+        directory: 'unknown',
+        protocol: 'unknown'
+      };
+    });
+  }
+
+  /**
+   * Map backend connection states to frontend states
+   */
+  static mapConnectionState(backendState: StatusResponse['state']): 'idle' | 'connecting' | 'success' | 'failed' {
+    switch (backendState) {
+      case 'Disconnected':
+        return 'idle';
+      case 'ConnectionInProgress':
+        return 'connecting';
+      case 'Connected':
+      case 'ConnectedWithTimer':
+        return 'success';
+      default:
+        return 'failed';
     }
   }
 
@@ -186,4 +456,4 @@ export class ApiService {
   }
 }
 
-export default ApiService; 
+export default ApiService;

@@ -19,6 +19,8 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<ConfigFile[]>([]);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -100,36 +102,36 @@ const App: React.FC = () => {
   };
 
   const handleConnect = async () => {
+    if (selectedFiles.length === 0) {
+      setConnectionError('Please select at least one configuration file');
+      return;
+    }
+
     try {
-      const response = await fetch('/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // TODO: Add payload structure here
-          selectedFiles
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Connection response:', result);
+      setIsConnecting(true);
+      setConnectionError(null);
       
-      // TODO: Handle successful connection
-      // For example: show success message, update UI state, etc.
+      // Use ApiService to connect with default timeout of 1 hour (3600 seconds)
+      const response = await ApiService.connect(selectedFiles, 3600);
+      
+      if (response.success) {
+        console.log('Connection successful:', response);
+        // Clear selected files after successful connection
+        setSelectedFiles([]);
+      } else {
+        throw new Error(response.message || 'Connection failed');
+      }
     } catch (error) {
       console.error('Failed to connect:', error);
-      // TODO: Handle connection error
-      // For example: show error message to user
+      setConnectionError(error instanceof Error ? error.message : 'Connection failed');
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   const handleCancel = () => {
     setSelectedFiles([]);
+    setConnectionError(null);
   };
 
   if (loading) return <Loading />;
@@ -150,6 +152,7 @@ const App: React.FC = () => {
         isDarkMode={isDarkMode}
       />
       
+      {/* HopVisualizer now manages its own state and shows actual connection status */}
       <HopVisualizer selectedFiles={selectedFiles} fileData={data} />
       
       <ProtocolNavbar
@@ -199,6 +202,8 @@ const App: React.FC = () => {
             onCancel={handleCancel}
             onApi={handleApi}
             isDarkMode={isDarkMode}
+            isConnecting={isConnecting}
+            connectionError={connectionError}
           />
         </div>
       </div>
