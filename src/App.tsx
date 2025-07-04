@@ -110,20 +110,41 @@ const App: React.FC = () => {
     try {
       setIsConnecting(true);
       setConnectionError(null);
-      
+
+      // Check current connection status
+      const status = await ApiService.getStatus();
+      let filesToConnect = selectedFiles;
+      if (status.state === 'Connected' || status.state === 'ConnectedWithTimer') {
+        // Parse currently connected files
+        const currentFiles = ApiService.parseHopNameList(status.hop_name_list || []);
+        // Merge selectedFiles with currentFiles, avoiding duplicates
+        const fileKey = (f: ConfigFile) => `${f.name}|${f.protocol}|${f.directory}`;
+        const allFilesMap = new Map(currentFiles.map(f => [fileKey(f), f]));
+        for (const f of selectedFiles) {
+          allFilesMap.set(fileKey(f), f);
+        }
+        filesToConnect = Array.from(allFilesMap.values());
+      }
+
       // Use ApiService to connect with default timeout of 1 hour (3600 seconds)
-      const response = await ApiService.connect(selectedFiles, 3600);
-      
+      const response = await ApiService.connect(filesToConnect, 3600);
+
       if (response.success) {
         console.log('Connection successful:', response);
         // Clear selected files after successful connection
         setSelectedFiles([]);
       } else {
-        throw new Error(response.message || 'Connection failed');
+        throw Error(typeof response.message === 'string' ? response.message : 'Connection failed');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to connect:', error);
-      setConnectionError(error instanceof Error ? error.message : 'Connection failed');
+      if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
+        setConnectionError((error as any).message);
+      } else if (typeof error === 'string') {
+        setConnectionError(error);
+      } else {
+        setConnectionError('Connection failed');
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -135,7 +156,7 @@ const App: React.FC = () => {
   };
 
   if (loading) return <Loading />;
-  if (error) return <Error message={error} onRetry={fetchData} />;
+  if (error) return <Error message={typeof error === 'string' ? error : String(error)} onRetry={fetchData} />;
   if (!data) return <Error message="No data available" onRetry={fetchData} />;
 
   const protocols = Object.keys(data);
@@ -204,6 +225,7 @@ const App: React.FC = () => {
             isDarkMode={isDarkMode}
             isConnecting={isConnecting}
             connectionError={connectionError}
+            errorMessage={error || connectionError}
           />
         </div>
       </div>

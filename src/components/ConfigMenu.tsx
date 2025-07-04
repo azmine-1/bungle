@@ -10,6 +10,7 @@ interface ConfigMenuProps {
   isDarkMode: boolean;
   isConnecting?: boolean;
   connectionError?: string | null;
+  errorMessage?: string | null;
 }
 
 // Button component for consistent styling
@@ -117,8 +118,11 @@ const ConfigMenu: React.FC<ConfigMenuProps> = ({
   onApi,
   isDarkMode,
   isConnecting = false,
-  connectionError = null
+  connectionError = null,
+  errorMessage = null
 }) => {
+  const [showErrorDialog, setShowErrorDialog] = React.useState(false);
+
   return (
     <div className={`w-full sm:w-[420px] ${
       isDarkMode 
@@ -128,25 +132,69 @@ const ConfigMenu: React.FC<ConfigMenuProps> = ({
       
       {/* Header */}
       <div className={`p-4 sm:p-6 border-b ${isDarkMode ? 'border-gray-800/50' : 'border-gray-200/50'}`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-            isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/10 text-blue-600'
-          }`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/10 text-blue-600'
+            }`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className={`text-lg sm:text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                Selected Hops
+              </h2>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+              </p>
+            </div>
+          </div>
+          {/* Error Icon */}
+          <button
+            className="relative group"
+            style={{ outline: 'none' }}
+            onClick={() => errorMessage && setShowErrorDialog(true)}
+            title={errorMessage ? 'Show error' : 'No errors'}
+            tabIndex={0}
+            aria-label="Show error dialog"
+            disabled={!errorMessage}
+          >
+            <svg
+              className={`w-6 h-6 transition-colors duration-200 ${errorMessage ? 'text-red-500 animate-pulse' : 'text-gray-400'} ${!errorMessage ? 'opacity-50' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" strokeWidth="2" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
             </svg>
-          </div>
-          <div>
-            <h2 className={`text-lg sm:text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-              Selected Hops
-            </h2>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
-            </p>
-          </div>
+          </button>
         </div>
       </div>
       
+      {/* Error Dialog Modal */}
+      {showErrorDialog && errorMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className={`bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 max-w-xs w-full border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}> 
+            <div className="flex items-center gap-2 mb-4">
+              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+              </svg>
+              <span className="font-semibold text-red-600 dark:text-red-400">Error</span>
+            </div>
+            <div className="mb-4 text-gray-700 dark:text-gray-200 text-sm break-words">{errorMessage}</div>
+            <button
+              className="w-full mt-2 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              onClick={() => setShowErrorDialog(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="p-4 sm:p-6">
         {/* Connection Error Display */}
