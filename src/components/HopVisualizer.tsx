@@ -23,6 +23,7 @@ const HopVisualizer: React.FC<HopVisualizerProps> = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isAddingTime, setIsAddingTime] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasNotifiedLowTime, setHasNotifiedLowTime] = useState(false);
 
   // Fetch status and timeout on component mount and set up polling
   useEffect(() => {
@@ -68,6 +69,33 @@ const HopVisualizer: React.FC<HopVisualizerProps> = () => {
       clearInterval(timeoutInterval);
     };
   }, [status?.state]);
+
+  // Handle low time notifications
+  useEffect(() => {
+    const tenMinutesInSeconds = 10 * 60; // 600 seconds
+    
+    if (timeRemaining > 0 && timeRemaining <= tenMinutesInSeconds && !hasNotifiedLowTime) {
+      // Request notification permission if not already granted
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      
+      // Show browser notification if permission is granted
+      if (Notification.permission === 'granted') {
+        new Notification('VPN Connection Warning', {
+          body: `Your VPN connection will expire in ${Math.ceil(timeRemaining / 60)} minutes`,
+          icon: '/favicon.ico'
+        });
+      }
+      
+      setHasNotifiedLowTime(true);
+    }
+    
+    // Reset notification flag when time is extended
+    if (timeRemaining > tenMinutesInSeconds && hasNotifiedLowTime) {
+      setHasNotifiedLowTime(false);
+    }
+  }, [timeRemaining, hasNotifiedLowTime]);
 
   const handleDisconnect = async () => {
     try {
