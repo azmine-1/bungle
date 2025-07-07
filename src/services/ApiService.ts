@@ -1,4 +1,4 @@
-import type { FileData, DirectoryData, ConfigFile } from '../types';
+import type { FileData, ConfigFile } from '../types';
 
 // Add new types for the API responses
 export interface StatusResponse {
@@ -49,7 +49,19 @@ export class ApiService {
     try {
       const response = await fetch(`${this.BASE_URL}/list_files`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        throw new Error(errorMessage);
       }
       return await response.json();
     } catch (error) {
@@ -66,7 +78,19 @@ export class ApiService {
     try {
       const response = await fetch(`${this.BASE_URL}/status`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        throw new Error(errorMessage);
       }
       return await response.json();
     } catch (error) {
@@ -101,11 +125,22 @@ export class ApiService {
         body: JSON.stringify(payload)
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error(`Connection failed with status: ${response.status}`);
+        let errorMessage = `Connection failed with status: ${response.status}`;
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      // Check if the API returned unsuccessful status
+      if (!responseData.success && responseData.message) {
+        throw new Error(responseData.message);
+      }
+
+      return responseData;
     } catch (error) {
       console.error('Failed to connect:', error);
       throw error;
@@ -126,7 +161,19 @@ export class ApiService {
       });
 
       if (!response.ok) {
-        throw new Error(`Disconnect failed with status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `Disconnect failed with status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Failed to disconnect:', error);
@@ -141,7 +188,19 @@ export class ApiService {
     try {
       const response = await fetch(`${this.BASE_URL}/timeout`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        throw new Error(errorMessage);
       }
       return await response.json();
     } catch (error) {
@@ -163,11 +222,22 @@ export class ApiService {
         }
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error(`Timeout update failed with status: ${response.status}`);
+        let errorMessage = `Timeout update failed with status: ${response.status}`;
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      // Check if the API returned unsuccessful status
+      if (!responseData.success && responseData.message) {
+        throw new Error(responseData.message);
+      }
+
+      return responseData;
     } catch (error) {
       console.error('Failed to update timeout:', error);
       throw error;

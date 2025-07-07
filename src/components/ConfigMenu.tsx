@@ -1,5 +1,13 @@
 import React from 'react';
 import type { ConfigFile } from '../types';
+import ConnectButton from './ui/ConnectButton';
+import ApiButton from './ui/ApiButton';
+import CancelButton from './ui/CancelButton';
+import FileItem from './ui/FileItem';
+import ErrorDialog from './ui/ErrorDialog';
+import ErrorIcon from './ui/ErrorIcon';
+import ConnectionError from './ui/ConnectionError';
+import EmptyState from './ui/EmptyState';
 
 interface ConfigMenuProps {
   selectedFiles: ConfigFile[];
@@ -12,103 +20,6 @@ interface ConfigMenuProps {
   connectionError?: string | null;
   errorMessage?: string | null;
 }
-
-// Button component for consistent styling
-const Button = ({ 
-  onClick, 
-  children, 
-  variant = 'primary',
-  className = '',
-  size = 'default',
-  disabled = false,
-  loading = false
-}: { 
-  onClick: () => void; 
-  children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'success';
-  className?: string;
-  size?: 'default' | 'small';
-  disabled?: boolean;
-  loading?: boolean;
-}) => {
-  const baseStyles = size === 'small' 
-    ? "py-2 px-3 rounded-lg transition-all duration-200 font-medium flex items-center justify-center text-sm"
-    : "py-2.5 px-4 rounded-lg transition-all duration-200 font-medium flex items-center justify-center";
-    
-  const variantStyles = {
-    primary: disabled || loading 
-      ? "bg-gray-400 text-gray-200 cursor-not-allowed" 
-      : "bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md",
-    secondary: disabled || loading
-      ? "bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-600 dark:text-gray-500"
-      : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600",
-    success: disabled || loading
-      ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-      : "bg-emerald-500 text-white hover:bg-emerald-600 hover:shadow-md"
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`${baseStyles} ${variantStyles[variant]} ${className}`}
-    >
-      {loading && (
-        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      )}
-      {children}
-    </button>
-  );
-};
-
-// File item component
-const FileItem = ({ 
-  file, 
-  onRemove, 
-  isDarkMode 
-}: { 
-  file: ConfigFile; 
-  onRemove: () => void;
-  isDarkMode: boolean;
-}) => (
-  <div 
-    className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-200 hover:scale-[1.02] ${
-      isDarkMode 
-        ? 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600 hover:bg-gray-800' 
-        : 'bg-gray-50/50 border-gray-200/50 hover:border-gray-300 hover:bg-white hover:shadow-sm'
-    }`}
-  >
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-3">
-        <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-blue-400' : 'bg-blue-500'}`} />
-        <div className="min-w-0 flex-1">
-          <p className={`font-medium truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-            {file.name}
-          </p>
-          <p className={`text-sm truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
-            {file.protocol}/{file.directory}
-          </p>
-        </div>
-      </div>
-    </div>
-    <button
-      onClick={onRemove}
-      className={`ml-3 p-2 opacity-0 group-hover:opacity-100 ${
-        isDarkMode 
-          ? 'text-gray-500 hover:text-red-400 hover:bg-gray-700' 
-          : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-      } rounded-lg transition-all duration-200`}
-      title="Remove file"
-    >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-  </div>
-);
 
 const ConfigMenu: React.FC<ConfigMenuProps> = ({
   selectedFiles,
@@ -150,86 +61,35 @@ const ConfigMenu: React.FC<ConfigMenuProps> = ({
               </p>
             </div>
           </div>
-          {/* Error Icon */}
-          <button
-            className="relative group"
-            style={{ outline: 'none' }}
+          
+          <ErrorIcon
             onClick={() => errorMessage && setShowErrorDialog(true)}
-            title={errorMessage ? 'Show error' : 'No errors'}
-            tabIndex={0}
-            aria-label="Show error dialog"
+            hasError={!!errorMessage}
             disabled={!errorMessage}
-          >
-            <svg
-              className={`w-6 h-6 transition-colors duration-200 ${errorMessage ? 'text-red-500 animate-pulse' : 'text-gray-400'} ${!errorMessage ? 'opacity-50' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="10" strokeWidth="2" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
-            </svg>
-          </button>
+          />
         </div>
       </div>
       
       {/* Error Dialog Modal */}
-      {showErrorDialog && errorMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className={`bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 max-w-xs w-full border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}> 
-            <div className="flex items-center gap-2 mb-4">
-              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
-              </svg>
-              <span className="font-semibold text-red-600 dark:text-red-400">Error</span>
-            </div>
-            <div className="mb-4 text-gray-700 dark:text-gray-200 text-sm break-words">{errorMessage}</div>
-            <button
-              className="w-full mt-2 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              onClick={() => setShowErrorDialog(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <ErrorDialog
+        isOpen={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        errorMessage={errorMessage || ''}
+        isDarkMode={isDarkMode}
+      />
 
       {/* Content */}
       <div className="p-4 sm:p-6">
         {/* Connection Error Display */}
         {connectionError && (
-          <div className={`mb-4 p-3 rounded-lg border ${
-            isDarkMode 
-              ? 'bg-red-900/20 border-red-800/50 text-red-400' 
-              : 'bg-red-50 border-red-200 text-red-700'
-          }`}>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-medium">Connection Error</span>
-            </div>
-            <p className="text-xs mt-1 opacity-90">{connectionError}</p>
-          </div>
+          <ConnectionError
+            message={connectionError}
+            isDarkMode={isDarkMode}
+          />
         )}
 
         {selectedFiles.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <div className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${
-              isDarkMode ? 'bg-gray-800/50 text-gray-500' : 'bg-gray-100/50 text-gray-400'
-            }`}>
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <p className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
-              No files selected
-            </p>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              Choose configuration files to get started
-            </p>
-          </div>
+          <EmptyState isDarkMode={isDarkMode} />
         ) : (
           <>
             <div className="space-y-3 mb-6 sm:mb-8">
@@ -245,46 +105,21 @@ const ConfigMenu: React.FC<ConfigMenuProps> = ({
             
             {/* Action buttons - side by side */}
             <div className="flex gap-2 sm:gap-3">
-              <Button 
-                onClick={onConnect} 
-                variant="primary" 
-                className="flex-1"
+              <ConnectButton
+                onClick={onConnect}
                 disabled={selectedFiles.length === 0}
                 loading={isConnecting}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="hidden sm:inline">
-                  {isConnecting ? 'Connecting...' : 'Connect'}
-                </span>
-                <span className="sm:hidden">
-                  {isConnecting ? 'Connecting...' : 'Connect'}
-                </span>
-              </Button>
-              <Button 
-                onClick={onApi} 
-                variant="success" 
                 className="flex-1"
+              />
+              <ApiButton
+                onClick={onApi}
                 disabled={isConnecting}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 002 2v12a2 2 0 002 2z" />
-                </svg>
-                <span className="hidden sm:inline">API</span>
-                <span className="sm:hidden">API</span>
-              </Button>
-              <Button 
-                onClick={onCancel} 
-                variant="secondary" 
-                size="small" 
-                className="px-3 sm:px-4"
+                className="flex-1"
+              />
+              <CancelButton
+                onClick={onCancel}
                 disabled={isConnecting}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </Button>
+              />
             </div>
           </>
         )}

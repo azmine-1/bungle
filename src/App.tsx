@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import ProtocolNavbar from './components/ProtoNavbar';
-import Loading from './components/Loading';
-import Error from './components/Error';
+import Loading from './components/ui/Loading';
+import Error from './components/ui/Error';
 import DirectoryNavbar from './components/DirNavbar';
 import ConnectionStatus from './components/CurrConnections';
 import FileList from './components/FileList';
@@ -41,7 +41,13 @@ const App: React.FC = () => {
         }
       }
     } catch (err) {
-      setError('Failed to fetch data from API');
+      if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as Error).message === 'string') {
+        setError((err as Error).message);
+      } else if (typeof err === 'string') {
+        setError(err);
+      } else {
+        setError('Failed to fetch data from API');
+      }
     } finally {
       setLoading(false);
     }
@@ -138,8 +144,8 @@ const App: React.FC = () => {
       }
     } catch (error: unknown) {
       console.error('Failed to connect:', error);
-      if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
-        setConnectionError((error as any).message);
+      if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as Error).message === 'string') {
+        setConnectionError((error as Error).message);
       } else if (typeof error === 'string') {
         setConnectionError(error);
       } else {

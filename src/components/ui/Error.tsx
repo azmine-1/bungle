@@ -1,3 +1,5 @@
+import React from 'react';
+
 interface ErrorProps {
   message: string;
   onRetry: () => void;
@@ -20,4 +22,4 @@ const Error: React.FC<ErrorProps> = ({ message, onRetry }) => {
   );
 };
 
-export default Error;
+export default Error; 

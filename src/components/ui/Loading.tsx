@@ -1,4 +1,5 @@
 import React from 'react'
+
 // Loading Component
 const Loading: React.FC = () => {
   return (
@@ -8,4 +9,4 @@ const Loading: React.FC = () => {
   );
 };
 
-export default Loading;
+export default Loading; 
