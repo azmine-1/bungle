@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiService from '../services/ApiService';
 import type { StatusResponse } from '../services/ApiService';
 import type { FileData, ConfigFile } from '../types';
@@ -25,52 +25,114 @@ const HopVisualizer: React.FC<HopVisualizerProps> = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasNotifiedLowTime, setHasNotifiedLowTime] = useState(false);
 
-  // Fetch status and timeout on component mount and set up polling
-  useEffect(() => {
+  // WebSocket reference
+  const wsRef = useRef<WebSocket | null>(null);
+  // Timer reference for local countdown
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const fetchStatus = async () => {
+  // ========== CHANGE 1: Modified useEffect to use WebSocket instead of polling ==========
+  useEffect(() => {
+    const initializeConnection = async () => {
       try {
+        // Initial status fetch
         const statusResponse = await ApiService.getStatus();
         setStatus(statusResponse);
         setError(null);
+
+        // Get initial timeout if connected
+        if (statusResponse.state === 'Connected' || statusResponse.state === 'ConnectedWithTimer') {
+          try {
+            const timeoutResponse = await ApiService.getTimeout();
+            setTimeRemaining(timeoutResponse.seconds_remaining);
+          } catch (err) {
+            console.error('Failed to fetch initial timeout:', err);
+          }
+        }
       } catch (err) {
-        console.error('Failed to fetch status:', err);
+        console.error('Failed to fetch initial status:', err);
         setError('Failed to fetch connection status');
       }
     };
 
-    const fetchTimeout = async () => {
-      try {
-        if (status?.state === 'Connected' || status?.state === 'ConnectedWithTimer') {
-          const timeoutResponse = await ApiService.getTimeout();
-          setTimeRemaining(timeoutResponse.seconds_remaining);
+    // Set up WebSocket connection for real-time status updates
+    const setupWebSocket = () => {
+      wsRef.current = ApiService.createStatusWebSocket(
+        (statusData) => {
+          setStatus(statusData);
+          setError(null);
+          
+          // If we just connected, fetch the timeout
+          if (statusData.state === 'Connected' || statusData.state === 'ConnectedWithTimer') {
+            ApiService.getTimeout().then(timeoutResponse => {
+              setTimeRemaining(timeoutResponse.seconds_remaining);
+            }).catch(err => {
+              console.error('Failed to fetch timeout after status update:', err);
+            });
+          } else {
+            // If disconnected, reset timer
+            setTimeRemaining(0);
+          }
+        },
+        (error) => {
+          console.error('WebSocket error:', error);
+          setError('Connection to server lost');
+        },
+        (event) => {
+          console.log('WebSocket closed:', event);
+          // Attempt to reconnect after a delay
+          setTimeout(() => {
+            if (wsRef.current?.readyState === WebSocket.CLOSED) {
+              setupWebSocket();
+            }
+          }, 3000);
         }
-      } catch (err) {
-        console.error('Failed to fetch timeout:', err);
-      }
+      );
     };
 
-    // Initial fetch
-    fetchStatus();
-    fetchTimeout();
+    // Initialize
+    initializeConnection();
+    setupWebSocket();
 
-    // Set up polling for status (every 2 seconds)
-    const statusInterval = setInterval(fetchStatus, 2000);
-
-    // Set up polling for timeout (every second when connected)
-    const timeoutInterval = setInterval(() => {
-      if (status?.state === 'Connected' || status?.state === 'ConnectedWithTimer') {
-        fetchTimeout();
-      }
-    }, 1000);
-
+    // Cleanup function
     return () => {
-      clearInterval(statusInterval);
-      clearInterval(timeoutInterval);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
-  }, [status?.state]);
+  }, []); // Empty dependency array - only run once
 
-  // Handle low time notifications
+  // ========== CHANGE 2: New useEffect for local timer countdown ==========
+  useEffect(() => {
+    // Clear existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    // Only start timer if we have time remaining and are connected
+    if (timeRemaining > 0 && (status?.state === 'Connected' || status?.state === 'ConnectedWithTimer')) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Timer expired, clear interval
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    // Cleanup function
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [timeRemaining, status?.state]);
+
+  // Handle low time notifications (unchanged)
   useEffect(() => {
     const tenMinutesInSeconds = 10 * 60; // 600 seconds
     
@@ -103,9 +165,7 @@ const HopVisualizer: React.FC<HopVisualizerProps> = () => {
       setError(null);
       await ApiService.disconnect();
       
-      // Refresh status after disconnect
-      const statusResponse = await ApiService.getStatus();
-      setStatus(statusResponse);
+      // The WebSocket will automatically update the status
       setTimeRemaining(0);
     } catch (err) {
       console.error('Failed to disconnect:', err);
@@ -115,15 +175,16 @@ const HopVisualizer: React.FC<HopVisualizerProps> = () => {
     }
   };
 
+  // ========== CHANGE 3: Modified handleAddTime to update local timer ==========
   const handleAddTime = async () => {
     try {
       setIsAddingTime(true);
       setError(null);
       await ApiService.addTimeout(3600); // Add 1 hour (3600 seconds)
       
-      // Refresh timeout after adding time
-      const timeoutResponse = await ApiService.getTimeout();
-      setTimeRemaining(timeoutResponse.seconds_remaining);
+      // Update local timer directly instead of fetching from server
+      setTimeRemaining(prev => prev + 3600);
+      
     } catch (err) {
       console.error('Failed to add time:', err);
       if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as Error).message === 'string') {
